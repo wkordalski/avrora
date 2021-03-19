@@ -226,8 +226,7 @@ public class TestEngine
                             && (now - thread.test_began) > MAXIMUM_TEST_MS)
                     {
                         thread.interrupt();
-                        thread.stop(
-                                new NonTermination(now - thread.test_began));
+                        thread.stop();
                     }
                 }
                 synchronized (this)
