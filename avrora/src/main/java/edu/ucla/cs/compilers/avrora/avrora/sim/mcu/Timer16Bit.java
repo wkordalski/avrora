@@ -49,6 +49,7 @@ import edu.ucla.cs.compilers.avrora.avrora.sim.state.BooleanView;
 public abstract class Timer16Bit extends AtmelInternalDevice
 {
     public static final long TIME_BASE = System.currentTimeMillis();
+    public static final boolean PRINT_ON_OVERFLOW = ("1".equals(System.getenv("AVRORA_PRINT_TIMER_OVERFLOW")));
 
     // Timer/Counter Modes of Operations
     public static final int MODE_NORMAL = 0;
@@ -345,8 +346,11 @@ public abstract class Timer16Bit extends AtmelInternalDevice
         Timer16Bit.BufferedRegister ocrah = ocA.OCRnXH_reg;
         Timer16Bit.BufferedRegister ocral = ocA.OCRnXL_reg;
         
-        // NOTE: change to `Mode_HostClock()` to use host clock
-        tickers[MODE_NORMAL] = new Mode_Normal();
+        if("1".equals(System.getenv("AVRORA_USE_HOSTCLOCK_TIMER"))) {
+            tickers[MODE_NORMAL] = new Mode_HostTime();
+        } else {
+            tickers[MODE_NORMAL] = new Mode_Normal();
+        }
         tickers[MODE_PWM_PHASE_CORRECT_8_BIT] = new Mode_PWMPhaseCorrect(0xff,
                 null, null);
         tickers[MODE_PWM_PHASE_CORRECT_9_BIT] = new Mode_PWMPhaseCorrect(0x1ff,
@@ -405,6 +409,10 @@ public abstract class Timer16Bit extends AtmelInternalDevice
             boolean enabled = xTIMSK_reg.readBit(TOIEn);
             devicePrinter.println("Timer" + n + ".overFlow (enabled: " + enabled
                     + ')' + "  ");
+        }
+        if (PRINT_ON_OVERFLOW) {
+            boolean enabled = xTIMSK_reg.readBit(TOIEn);
+            System.err.println("Timer" + n + ".overFlow (enabled: " + enabled + ')');
         }
         // set the overflow flag for this timer
         xTIFR_reg.flagBit(TOVn);
@@ -623,8 +631,6 @@ public abstract class Timer16Bit extends AtmelInternalDevice
             if (ncount >= MAX)
             {
                 overflow();
-                // To detect timer overflow during execution
-                System.err.println("Overflown");
                 ncount = BOTTOM;
             } else
             {
